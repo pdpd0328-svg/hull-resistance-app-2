@@ -152,11 +152,20 @@ st.markdown("""
             border: 1px solid #334155 !important;
             border-radius: 12px !important;
         }
-        [data-testid="stSidebar"] input,
-        [data-testid="stSidebar"] select,
-        [data-testid="stSidebar"] div[role="listbox"] {
-            color: #f8fafc !important;
-            border-color: #475569 !important;
+        /* 입력창 내의 타이핑 텍스트 및 기본 값 텍스트를 검은색/어두운 색으로 설정하고 배경을 흰색으로 고정 */
+        [data-testid="stSidebar"] input {
+            color: #0f172a !important;
+            background-color: #ffffff !important;
+        }
+        /* 드롭다운 셀렉트 박스 내부 텍스트 색상 및 배경 수정 */
+        [data-testid="stSidebar"] div[data-baseweb="select"] {
+            background-color: #ffffff !important;
+        }
+        [data-testid="stSidebar"] div[data-baseweb="select"] * {
+            color: #0f172a !important;
+        }
+        [data-testid="stSidebar"] div[role="listbox"] * {
+            color: #0f172a !important;
         }
     </style>
 """, unsafe_allow_html=True)
