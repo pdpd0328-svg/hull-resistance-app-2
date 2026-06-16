@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # 페이지 설정
 st.set_page_config(
@@ -11,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 고급스러운 스타일링을 위한 커스텀 CSS 적용
+# 고급스러운 스타일링 및 사이드바 다크 톤 커스텀 CSS 적용
 st.markdown("""
     <style>
         /* 폰트 및 스타일 전반 적용 */
@@ -50,6 +51,7 @@ st.markdown("""
             margin-bottom: 2rem;
             font-weight: 300;
         }
+        
         /* 개별 메트릭 카드 스타일 */
         .metric-card {
             background: white;
@@ -132,14 +134,38 @@ st.markdown("""
             border: 1px solid #cbd5e1;
             margin: 1rem 0;
         }
+        
+        /* 사이드바 다크 톤 그라데이션 및 위젯 폰트색 커스텀 */
+        [data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
+            color: #f8fafc !important;
+        }
+        [data-testid="stSidebar"] h2, 
+        [data-testid="stSidebar"] p, 
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] span,
+        [data-testid="stSidebar"] .st-expander summary {
+            color: #f8fafc !important;
+        }
+        [data-testid="stSidebar"] .st-expander {
+            background-color: #1e293b !important;
+            border: 1px solid #334155 !important;
+            border-radius: 12px !important;
+        }
+        [data-testid="stSidebar"] input,
+        [data-testid="stSidebar"] select,
+        [data-testid="stSidebar"] div[role="listbox"] {
+            color: #f8fafc !important;
+            border-color: #475569 !important;
+        }
     </style>
 """, unsafe_allow_html=True)
 
 # ----------------- 사이드바 상세 입력창 -----------------
 st.sidebar.markdown("""
     <div style='text-align: center; margin-bottom: 1.5rem;'>
-        <h2 style='margin: 0; color: #1e3a8a; font-family: "Noto Sans KR"; font-size: 1.6rem;'>선체 제원 설정</h2>
-        <p style='color: #64748b; font-size: 0.85rem; margin-top: 0.2rem;'>선형 및 부가물의 상세 치수를 입력하세요</p>
+        <h2 style='margin: 0; color: #38bdf8; font-family: "Noto Sans KR"; font-size: 1.6rem;'>선체 제원 설정</h2>
+        <p style='color: #94a3b8; font-size: 0.85rem; margin-top: 0.2rem;'>선형 및 부가물의 상세 치수를 입력하세요</p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -466,7 +492,13 @@ else:
     st.markdown("<br>", unsafe_allow_html=True)
     
     # 탭 메뉴
-    tab_dashboard, tab_table, tab_ref = st.tabs(["📊 성능 그래프 분석", "📋 속도별 상세 데이터", "📖 학술 논문급 저항 공식 해설"])
+    tab_dashboard, tab_3d, tab_sensitivity, tab_table, tab_ref = st.tabs([
+        "📊 성능 그래프 분석", 
+        "🚢 3D 선형 시각화", 
+        "📈 설계 변수 민감도 분석",
+        "📋 속도별 상세 데이터", 
+        "📖 학술 논문급 저항 공식 해설"
+    ])
     
     # ----------------- 탭 1: 대시보드 그래프 -----------------
     with tab_dashboard:
@@ -594,15 +626,320 @@ else:
             plot_bgcolor='rgba(248, 250, 252, 0.7)',
             paper_bgcolor='rgba(0,0,0,0)',
             margin=dict(l=40, r=40, t=80, b=40),
-            height=580
+            height=550
         )
         
         fig.update_xaxes(showgrid=True, gridcolor='#e2e8f0', linecolor='#cbd5e1')
         fig.update_yaxes(showgrid=True, gridcolor='#e2e8f0', linecolor='#cbd5e1')
         
-        st.plotly_chart(fig, use_container_width=True)
+        # 저항 성분 비율 도넛 차트 생성
+        donut_labels = ['점성 저항', '조파 저항', '구상선수 저항', '트랜섬 저항', '부가물 저항', '상관 저항']
+        donut_values = [
+            res_selected['R_visc'],
+            res_selected['Rw'],
+            res_selected['Rb'],
+            res_selected['Rtr'],
+            res_selected['Rapp'],
+            res_selected['Ra']
+        ]
         
-    # ----------------- 탭 2: 수치 표 -----------------
+        # 0보다 큰 값만 도넛 차트에 필터링 적용
+        nz_labels = []
+        nz_values = []
+        for l, v_val in zip(donut_labels, donut_values):
+            if v_val > 0:
+                nz_labels.append(l)
+                nz_values.append(v_val)
+                
+        fig_donut = go.Figure(data=[go.Pie(
+            labels=nz_labels,
+            values=nz_values,
+            hole=.45,
+            marker=dict(colors=['#2563eb', '#dc2626', '#d97706', '#7c3aed', '#db2777', '#10b981']),
+            textinfo='percent',
+            hoverinfo='label+value+percent'
+        )])
+        
+        fig_donut.update_layout(
+            title=dict(
+                text=f'설계 속도({V_selected:.1f} kts) 기준 저항 구성비',
+                font=dict(family='Noto Sans KR', size=16, color='#0f172a')
+            ),
+            legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=0.85),
+            margin=dict(l=20, r=100, t=60, b=20),
+            height=550
+        )
+        
+        # 2열로 배치
+        col_line, col_donut = st.columns([3, 2])
+        with col_line:
+            st.plotly_chart(fig, use_container_width=True)
+        with col_donut:
+            st.plotly_chart(fig_donut, use_container_width=True)
+        
+    # ----------------- 탭 2: 3D 선형 시각화 -----------------
+    with tab_3d:
+        st.subheader("실시간 3차원 선형 모델 시각화")
+        st.write("설정된 제원($L_{bp}$, $B$, $T$, $C_b$, $C_m$, $A_{trans}$, $A_{bt}$, $h_b$)에 따라 실시간으로 계산 및 변형되는 3차원 형상입니다. 마우스 드래그로 회전하거나 확대할 수 있습니다.")
+        
+        # 3D Grid 계산 (x: 선수-선미, z: 흘수방향)
+        x_vals = np.linspace(-Lbp/2, Lbp/2, 40)
+        z_vals = np.linspace(0, T * 1.2, 25)  # 흘수 120%까지 시각화
+        X, Z = np.meshgrid(x_vals, z_vals)
+        
+        u = X / (Lbp/2)  # -1 (선미) ~ +1 (선수)
+        w = Z / T        # 0 (용골) ~ 1.2 (갑판 높이 비)
+        
+        # 중앙단면계수(Cm)에 비례한 빌지 반경 지수 r
+        r_bilge = 0.5 * (1.0 - Cm) / max(0.01, Cm)
+        r_bilge = max(0.01, min(r_bilge, 0.5))
+        
+        # Cb에 따른 수선형 비대도 지수
+        p = 1.0 + 5.0 * Cb
+        q = 1.0 + 4.0 * Cb
+        
+        # 트랜섬 선미 너비 비
+        if A_trans > 0 and T > 0:
+            t_trans = min(0.5, np.sqrt(A_trans / T) / B)
+        else:
+            t_trans = 0.0
+            
+        f_x = np.zeros_like(u)
+        f_x[u >= 0] = 1.0 - (u[u >= 0] ** p)
+        f_x[u < 0] = (1.0 - t_trans) * (1.0 - (-u[u < 0]) ** q) + t_trans
+        
+        f_z = np.zeros_like(w)
+        f_z[w <= 1.0] = w[w <= 1.0] ** r_bilge
+        f_z[w > 1.0] = 1.0 + (w[w > 1.0] - 1.0) * 0.15 # 흘수선 위 플레어 각도
+        
+        Y_stbd = (B / 2.0) * f_x * f_z
+        Y_port = -Y_stbd
+        
+        fig_3d = go.Figure()
+        
+        # 광택 있는 질감 조명 설정
+        lighting_style = dict(
+            ambient=0.5,
+            diffuse=0.8,
+            roughness=0.15,
+            specular=0.5,
+            fresnel=0.4
+        )
+        
+        # 1. 우현 선체 표면
+        fig_3d.add_trace(go.Surface(
+            x=X, y=Y_stbd, z=Z,
+            colorscale=[[0, '#2563eb'], [1, '#1e3a8a']],
+            showscale=False,
+            name='우현 선체 (Starboard)',
+            opacity=0.92,
+            lighting=lighting_style
+        ))
+        
+        # 2. 좌현 선체 표면
+        fig_3d.add_trace(go.Surface(
+            x=X, y=Y_port, z=Z,
+            colorscale=[[0, '#2563eb'], [1, '#1e3a8a']],
+            showscale=False,
+            name='좌현 선체 (Port)',
+            opacity=0.92,
+            lighting=lighting_style
+        ))
+        
+        # 3. 구상 선수 벌브 (If A_bt > 0)
+        L_bulb = 0.06 * Lbp if A_bt > 0 else 0.0
+        if A_bt > 0:
+            theta = np.linspace(0, np.pi, 20)
+            phi = np.linspace(0, 2 * np.pi, 20)
+            THETA, PHI = np.meshgrid(theta, phi)
+            
+            R_y = np.sqrt(A_bt / np.pi)
+            R_z = R_y
+            
+            x_c = Lbp / 2 + L_bulb * 0.15
+            y_c = 0.0
+            z_c = h_b
+            
+            X_bulb = x_c + L_bulb * 0.5 * np.cos(THETA)
+            Y_bulb = y_c + R_y * np.sin(THETA) * np.sin(PHI)
+            Z_bulb = z_c + R_z * np.sin(THETA) * np.cos(PHI)
+            
+            fig_3d.add_trace(go.Surface(
+                x=X_bulb, y=Y_bulb, z=Z_bulb,
+                colorscale=[[0, '#38bdf8'], [1, '#0369a1']],
+                showscale=False,
+                name='구상선수 (Bulbous Bow)',
+                opacity=0.95,
+                lighting=lighting_style
+            ))
+            
+        # 4. 계획 흘수면 (Waterline Plane)
+        x_wplane = np.array([-Lbp/2 - 5.0, Lbp/2 + L_bulb + 5.0])
+        y_wplane = np.array([-B * 0.8, B * 0.8])
+        X_wp, Y_wp = np.meshgrid(x_wplane, y_wplane)
+        Z_wp = np.ones_like(X_wp) * T
+        
+        fig_3d.add_trace(go.Surface(
+            x=X_wp, y=Y_wp, z=Z_wp,
+            colorscale=[[0, '#06b6d4'], [1, '#0891b2']],
+            showscale=False,
+            opacity=0.45,
+            name='계획 흘수면 (Waterline)'
+        ))
+        
+        fig_3d.update_layout(
+            title=dict(
+                text='선체 3D 형상 모델 시각화',
+                font=dict(family='Noto Sans KR', size=18, color='#0f172a')
+            ),
+            scene=dict(
+                xaxis=dict(title='길이 (Lbp) [m]', range=[-Lbp*0.6, Lbp*0.7], gridcolor='#e2e8f0'),
+                yaxis=dict(title='너비 (B) [m]', range=[-B*1.2, B*1.2], gridcolor='#e2e8f0'),
+                zaxis=dict(title='높이 (Z) [m]', range=[0, T*2.0], gridcolor='#e2e8f0'),
+                aspectmode='manual',
+                aspectratio=dict(x=3.0, y=1.0, z=0.8), # 배의 가로-세로 비율 조정
+                camera=dict(
+                    eye=dict(x=1.8, y=1.8, z=1.2)
+                )
+            ),
+            margin=dict(l=0, r=0, b=0, t=50),
+            height=650
+        )
+        
+        st.plotly_chart(fig_3d, use_container_width=True)
+        
+    # ----------------- 탭 3: 설계 변수 민감도 분석 -----------------
+    with tab_sensitivity:
+        st.subheader("설계 변수 변화에 따른 저항 및 마력 영향 분석")
+        st.write("현재 설정된 선체 제원(Nominal Value)을 기준으로, 특정 설계 변수를 -20%부터 +20%까지 변화시킬 때 총저항($R_T$)과 필요 유효마력($P_e$)의 변화율을 시각화합니다.")
+        
+        # 분석할 설계 변수 선택
+        param_choice = st.selectbox(
+            "민감도 분석을 수행할 설계 변수를 선택하세요:",
+            options=["수선간장 (Lbp)", "선폭 (B)", "계획 흘수 (T)", "방형 비척 계수 (Cb)"]
+        )
+        
+        # nominal 값 저장
+        nominal_Lbp = Lbp
+        nominal_B = B
+        nominal_T = T
+        nominal_Cb = Cb
+        
+        variations = np.linspace(-0.20, 0.20, 11)  # -20% ~ +20% 11단계
+        sensitivity_data = []
+        
+        for var in variations:
+            scale = 1.0 + var
+            temp_Lbp = nominal_Lbp
+            temp_B = nominal_B
+            temp_T = nominal_T
+            temp_Cb = nominal_Cb
+            
+            if param_choice == "수선간장 (Lbp)":
+                temp_Lbp = nominal_Lbp * scale
+                val_str = f"{temp_Lbp:.1f} m"
+            elif param_choice == "선폭 (B)":
+                temp_B = nominal_B * scale
+                val_str = f"{temp_B:.1f} m"
+            elif param_choice == "계획 흘수 (T)":
+                temp_T = nominal_T * scale
+                val_str = f"{temp_T:.1f} m"
+            elif param_choice == "방형 비척 계수 (Cb)":
+                temp_Cb = max(0.3, min(0.95, nominal_Cb * scale))
+                val_str = f"{temp_Cb:.4f}"
+                
+            if auto_cwp:
+                temp_Cwp = 0.7 * temp_Cb + 0.3
+            else:
+                temp_Cwp = Cwp_val
+                
+            res_temp = calculate_resistance_components(
+                Lbp=temp_Lbp, B=temp_B, T=temp_T, Cb=temp_Cb, Cm=Cm, Cwp=temp_Cwp,
+                LCB=LCB_pct, c_stern=c_stern, A_bt=A_bt, h_b=h_b, A_trans=A_trans,
+                S_app=S_app, one_plus_k_app=one_plus_k_app, V_knots=V_selected
+            )
+            
+            sensitivity_data.append({
+                '변화율 (%)': var * 100,
+                '변수 값': val_str,
+                '총저항 (Rt) [kN]': res_temp['Rt'],
+                '유효동력 (Pe) [kW]': res_temp['Pe_kW']
+            })
+            
+        df_sens = pd.DataFrame(sensitivity_data)
+        
+        # 듀얼 Y축 그래프 생성
+        fig_sens = make_subplots(specs=[[{"secondary_y": True}]])
+        
+        # 총저항 Rt 라인 추가
+        fig_sens.add_trace(
+            go.Scatter(
+                x=df_sens['변화율 (%)'], y=df_sens['총저항 (Rt) [kN]'],
+                mode='lines+markers', name='총저항 (Rt) [kN]',
+                line=dict(color='#dc2626', width=3),
+                marker=dict(size=8),
+                hovertemplate='변화율: %{x}%<br>변수값: %{text}<br>총저항: %{y:.2f} kN',
+                text=df_sens['변수 값']
+            ),
+            secondary_y=False
+        )
+        
+        # 유효동력 Pe 라인 추가
+        fig_sens.add_trace(
+            go.Scatter(
+                x=df_sens['변화율 (%)'], y=df_sens['유효동력 (Pe) [kW]'],
+                mode='lines+markers', name='유효동력 (Pe) [kW]',
+                line=dict(color='#2563eb', width=3, dash='dash'),
+                marker=dict(size=8),
+                hovertemplate='변화율: %{x}%<br>변수값: %{text}<br>유효동력: %{y:.1f} kW',
+                text=df_sens['변수 값']
+            ),
+            secondary_y=True
+        )
+        
+        # 0% 기준선 추가
+        fig_sens.add_shape(
+            type="line",
+            x0=0, y0=0, x1=0, y1=1,
+            yref="paper",
+            line=dict(color="#64748b", width=2, dash="dot"),
+        )
+        
+        fig_sens.add_annotation(
+            x=0, y=1.05,
+            yref="paper",
+            text="현재 설계 기준값 (0%)",
+            showarrow=False,
+            font=dict(size=11, color="#64748b")
+        )
+        
+        fig_sens.update_layout(
+            title=dict(
+                text=f'{param_choice} 변화에 따른 설계점 성능 민감도 분석',
+                font=dict(family='Noto Sans KR', size=18, color='#0f172a')
+            ),
+            xaxis_title=f'{param_choice} 변화율 (%)',
+            hovermode='x unified',
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.05,
+                xanchor="right",
+                x=1
+            ),
+            plot_bgcolor='rgba(248, 250, 252, 0.7)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            margin=dict(l=40, r=40, t=80, b=40),
+            height=550
+        )
+        
+        fig_sens.update_xaxes(showgrid=True, gridcolor='#e2e8f0', linecolor='#cbd5e1', ticksuffix="%")
+        fig_sens.update_yaxes(title_text="총저항 Rt [kN]", showgrid=True, gridcolor='#e2e8f0', linecolor='#cbd5e1', secondary_y=False)
+        fig_sens.update_yaxes(title_text="유효동력 Pe [kW]", showgrid=False, linecolor='#cbd5e1', secondary_y=True)
+        
+        st.plotly_chart(fig_sens, use_container_width=True)
+        
+    # ----------------- 탭 4: 수치 표 -----------------
     with tab_table:
         st.subheader("속도 구간별 저항 계산 수치 데이터")
         st.write("아래 표는 선박 속도 증가에 따라 각 저항 성분이 어떻게 변화하는지 정량적으로 보여줍니다.")
@@ -630,7 +967,7 @@ else:
         
         st.dataframe(df_display, use_container_width=True, hide_index=True)
         
-    # ----------------- 탭 3: 학술 논문급 저항 공식 해설 -----------------
+    # ----------------- 탭 5: 학술 논문급 저항 공식 해설 -----------------
     with tab_ref:
         st.subheader("Holtrop & Mennen (1982, 1984) 학술 연구 저항 공식 해설")
         st.write("이 대시보드 그래프에 반영된 각 저항 성분의 정밀 연산식은 Holtrop & Mennen의 원래 수학적 회귀 모델에 기반을 두고 있습니다. 각 성분의 수식과 원리는 다음과 같습니다.")
