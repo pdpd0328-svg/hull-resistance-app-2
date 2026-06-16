@@ -108,3 +108,23 @@ with tab_dashboard:
 with tab_table:
     st.subheader("📋 속도별 수치 데이터 시트")
     st.dataframe(df, use_container_width=True, hide_index=True)
+
+with tab_ref:
+    st.subheader("Holtrop & Mennen (1982, 1984) 학술 연구 저항 공식 해설")
+    st.write("이 대시보드 그래프에 반영된 각 저항 성분의 정밀 연산식은 Holtrop & Mennen의 원래 수학적 회귀 모델에 기반을 두고 있습니다.")
+    
+    st.markdown("### 1. 지배 방정식 (Governing Equation)")
+    st.latex(r"R_T = R_F (1 + k_1) + R_{APP} + R_W + R_B + R_{TR} + R_A")
+    
+    st.markdown("### 2. 마찰 저항 (Frictional Resistance, $R_F$)")
+    st.latex(r"R_F = \frac{1}{2} \rho S V^2 C_F")
+    st.latex(r"C_F = \frac{0.075}{(\log_{10}(Re) - 2)^2}")
+    
+    st.markdown("### 3. 점성 저항 및 형상 계수 ($1+k_1$)")
+    st.latex(r"1 + k_1 = 0.93 + 0.487118 \cdot c_{14} \cdot \left(\frac{B}{L_{bp}}\right)^{1.06806} \cdot \left(\frac{T}{L_{bp}}\right)^{0.46106}")
+    
+    st.markdown("### 4. 조파 저항 (Wave-making Resistance, $R_W$)")
+    st.latex(r"R_W = c_1 c_2 c_5 \rho g \nabla \exp \left[ m_1 F_n^{-0.9} + m_2 \cos(\lambda F_n^{-2}) \right]")
+    
+    st.markdown("---")
+    st.caption("Reference: Holtrop, J., & Mennen, G. G. J. (1982). An approximate power prediction method. International Shipbuilding Progress, 29(335), 166-170.")
