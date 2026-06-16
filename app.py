@@ -83,11 +83,7 @@ with col2:
                   title=f"L={Lbp}m, B={B}m, T={T}m 조건의 저항 곡선")
     st.plotly_chart(fig, use_container_width=True)
 
-# 6. 학술적 출처 명시 (Footer)
+# 6. 학술적 출처 명시 (오류 수정을 위해 구조 변경)
 st.markdown("---")
-st.markdown(
-    "<div style='text-align: center; color: gray; font-size: 0.8em;'>"
-    "Reference: Holtrop, J., & Mennen, G. G. J. (1982). An approximate power prediction method. International Shipbuilding Progress, 29(335), 166-170."
-    "</div>", 
-    unsafe_html=True
-)
+footer_html = "<div style='text-align: center; color: gray; font-size: 0.8em;'>Reference: Holtrop, J., & Mennen, G. G. J. (1982). An approximate power prediction method. International Shipbuilding Progress, 29(335), 166-170.</div>"
+st.markdown(footer_html, unsafe_html=True)
